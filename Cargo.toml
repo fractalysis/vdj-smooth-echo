@@ -7,9 +7,10 @@ authors = ["Fraccy (ssh)"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-synthrs = { git = "https://github.com/gyng/synthrs", package = "synthrs" }
 baseplug = { git = "https://github.com/wrl/baseplug.git", package = "baseplug" }
+fundsp = "0.15.0"
 serde = "1.0.190"
+typenum = "1.17.0"
 
 [lib]
 name = "vdj_smooth_echo"

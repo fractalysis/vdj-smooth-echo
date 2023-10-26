@@ -3,6 +3,8 @@ extern crate serde;
 
 use serde::{Deserialize, Serialize};
 use baseplug::{Plugin, ProcessContext};
+use fundsp::delay;
+use typenum::U1;
 
 
 
@@ -31,6 +33,8 @@ impl Default for EchoModel {
 
 
 struct EchoPlug {
+    delay_l: delay::Tap<U1,f32>,
+    delay_r: delay::Tap<U1,f32>
 }
 
 impl Plugin for EchoPlug {
@@ -46,6 +50,8 @@ impl Plugin for EchoPlug {
     #[inline]
     fn new(_sample_rate: f32, _model: &EchoModel) -> Self {
         EchoPlug {
+            delay_l: delay::Tap::new(0.001, 2.0),
+            delay_r: delay::Tap::new(0.001, 2.0)
         }
     }
 
