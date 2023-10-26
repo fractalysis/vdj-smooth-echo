@@ -1,0 +1,17 @@
+[package]
+name = "vdj-smooth-echo"
+version = "0.1.0"
+edition = "2021"
+authors = ["Fraccy (ssh)"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+synthrs = { git = "https://github.com/gyng/synthrs", package = "synthrs" }
+baseplug = { git = "https://github.com/wrl/baseplug.git", package = "baseplug" }
+serde = "1.0.190"
+
+[lib]
+name = "vdj_smooth_echo"
+path = "src/vdj_smooth_echo.rs"
+crate-type = ["cdylib"]
