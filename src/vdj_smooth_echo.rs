@@ -9,7 +9,7 @@ use typenum::U1;
 
 // Experimental way of turning down the volume as the feedback goes up
 // This multiplies the input by (1-VCC*feedback) before putting into the chain,
-//   so VCC=1 assumes the amplitude is a geometric series (1/(1-amplitude))
+//   so VCC=1 assumes the amplitude is proportional to a geometric series (1/(1-feedback))
 // Set to 0 to not turn down the volume at all
 const VOLUME_CONTROL_COEF: f32 = 0.92;
 
