@@ -12,8 +12,7 @@ baseplug::model! {
     #[derive(Debug, Serialize, Deserialize)]
     struct EchoModel {
         #[model(min = 0.001, max = 2.0)]
-        #[parameter(name = "time", unit = "Generic",
-            gradient = "Power(2.0)")]
+        #[parameter(name = "time", unit = "Generic", gradient = "Power(4.0)")]
         time: f32,
 
         #[model(min = 0.0, max = 1.0)]
@@ -26,7 +25,7 @@ impl Default for EchoModel {
     fn default() -> Self {
         Self {
             time: 0.5,
-            feedback: 0.8
+            feedback: 0.0
         }
     }
 }
@@ -72,15 +71,30 @@ impl Plugin for EchoPlug {
         let output = &mut ctx.outputs[0].buffers;
 
         for i in 0..ctx.nframes {
-            self.previous_delay_sample_l = self.delay_l.tick(&Frame::from([
-                input[0][i] + self.previous_delay_sample_l * model.feedback[i], model.time[i]
-            ]))[0];
-            self.previous_delay_sample_r = self.delay_r.tick(&Frame::from([
-                input[1][i] + self.previous_delay_sample_r * model.feedback[i], model.time[i]
-            ]))[0];
 
-            output[0][i] = input[0][i] + self.previous_delay_sample_l * model.feedback[i];
-            output[1][i] = input[1][i] + self.previous_delay_sample_r * model.feedback[i];
+            if model.feedback[i] > 0.99 { // Lock the samples into an infinite loop
+                self.previous_delay_sample_l = self.delay_l.tick(&Frame::from([
+                    self.previous_delay_sample_l, model.time[i]
+                ]))[0];
+                self.previous_delay_sample_r = self.delay_r.tick(&Frame::from([
+                    self.previous_delay_sample_r, model.time[i]
+                ]))[0];
+
+                output[0][i] = self.previous_delay_sample_l;
+                output[1][i] = self.previous_delay_sample_r;
+            }
+
+            else {
+                self.previous_delay_sample_l = self.delay_l.tick(&Frame::from([
+                    input[0][i] + self.previous_delay_sample_l * model.feedback[i], model.time[i]
+                ]))[0];
+                self.previous_delay_sample_r = self.delay_r.tick(&Frame::from([
+                    input[1][i] + self.previous_delay_sample_r * model.feedback[i], model.time[i]
+                ]))[0];
+
+                output[0][i] = input[0][i] + self.previous_delay_sample_l * model.feedback[i];
+                output[1][i] = input[1][i] + self.previous_delay_sample_r * model.feedback[i];
+            }
         }
         
     }
