@@ -7,6 +7,11 @@ use fundsp::{delay, audionode::Frame, prelude::AudioNode};
 use typenum::U1;
 
 
+// Todo:
+// - Lowpass output
+// - Turn up smoothing on time parameter
+
+
 // Experimental way of turning down the volume as the feedback goes up
 // This multiplies the input by (1-VCC*feedback) before putting into the chain,
 //   so VCC=1 assumes the amplitude is proportional to a geometric series (1/(1-feedback))
