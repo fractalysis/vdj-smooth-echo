@@ -17,10 +17,6 @@ baseplug::model! {
         time: f32,
 
         #[model(min = 0.0, max = 1.0)]
-        #[parameter(name = "mix", unit = "Percentage")]
-        mix: f32,
-
-        #[model(min = 0.0, max = 1.0)]
         #[parameter(name = "feedback", unit = "Percentage")]
         feedback: f32,
     }
@@ -30,7 +26,6 @@ impl Default for EchoModel {
     fn default() -> Self {
         Self {
             time: 0.5,
-            mix: 0.0,
             feedback: 0.8
         }
     }
@@ -84,8 +79,8 @@ impl Plugin for EchoPlug {
                 input[1][i] + self.previous_delay_sample_r * model.feedback[i], model.time[i]
             ]))[0];
 
-            output[0][i] = input[0][i] * (1. - model.mix[i]) + self.previous_delay_sample_l * model.mix[i];
-            output[1][i] = input[1][i] * (1. - model.mix[i]) + self.previous_delay_sample_r * model.mix[i];
+            output[0][i] = input[0][i] + self.previous_delay_sample_l * model.feedback[i];
+            output[1][i] = input[1][i] + self.previous_delay_sample_r * model.feedback[i];
         }
         
     }
