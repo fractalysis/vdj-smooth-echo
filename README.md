@@ -6,3 +6,5 @@ FEATURES OF THIS ONE:
  - Just two knobs (time and feedback)
  - Turns down the delayline input as you turn up the feedback so your limiter doesn't explode
  - 100% feedback activates LOCK MODE, where your samples enter an infinite loop :3
+
+[DOWNLOAD (the DLL is a VST2)](https://github.com/fractalysis/vdj-smooth-echo/releases)
