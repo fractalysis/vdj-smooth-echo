@@ -3,7 +3,7 @@ extern crate serde;
 
 use serde::{Deserialize, Serialize};
 use baseplug::{Plugin, ProcessContext};
-use fundsp::delay;
+use fundsp::{delay, audionode::Frame, prelude::AudioNode, signal::new_signal_frame};
 use typenum::U1;
 
 
@@ -17,8 +17,12 @@ baseplug::model! {
         time: f32,
 
         #[model(min = 0.0, max = 1.0)]
+        #[parameter(name = "mix", unit = "Percentage")]
+        mix: f32,
+
+        #[model(min = 0.0, max = 1.0)]
         #[parameter(name = "time", unit = "Percentage")]
-        feedback: f32
+        feedback: f32,
     }
 }
 
@@ -26,6 +30,7 @@ impl Default for EchoModel {
     fn default() -> Self {
         Self {
             time: 0.5,
+            mix: 0.0,
             feedback: 0.8
         }
     }
@@ -49,10 +54,15 @@ impl Plugin for EchoPlug {
 
     #[inline]
     fn new(_sample_rate: f32, _model: &EchoModel) -> Self {
-        EchoPlug {
+        let mut ret = EchoPlug {
             delay_l: delay::Tap::new(0.001, 2.0),
             delay_r: delay::Tap::new(0.001, 2.0)
-        }
+        };
+
+        ret.delay_l.set_sample_rate(_sample_rate as f64);
+        ret.delay_r.set_sample_rate(_sample_rate as f64);
+
+        ret
     }
 
     #[inline]
@@ -61,8 +71,15 @@ impl Plugin for EchoPlug {
         let output = &mut ctx.outputs[0].buffers;
 
         for i in 0..ctx.nframes {
-            output[0][i] = input[0][i];
-            output[1][i] = input[1][i];
+            let delayed_frame_l = self.delay_l.tick(&Frame::from([
+                input[0][i], model.time[i]
+            ]));
+            let delayed_frame_r = self.delay_r.tick(&Frame::from([
+                input[1][i], model.time[i]
+            ]));
+
+            output[0][i] = input[0][i] * (1. - model.mix[i]) + delayed_frame_l[0] * model.mix[i];
+            output[1][i] = input[1][i] * (1. - model.mix[i]) + delayed_frame_r[0] * model.mix[i];
         }
         
     }
