@@ -3,13 +3,14 @@ extern crate serde;
 
 use serde::{Deserialize, Serialize};
 use baseplug::{Plugin, ProcessContext};
-use fundsp::{delay, audionode::Frame, prelude::AudioNode};
+use fundsp::{delay, filter, audionode::Frame, prelude::AudioNode};
 use typenum::U1;
 
 
 // Todo:
-// - Lowpass output
-// - Turn up smoothing on time parameter
+// - (Insane Mode) Smoothed snapping of the time parameter over a full half second to 1/2, 1/4, and 1/8 notes if you are within ~1 semitone
+//     (e.g. at 120 bpm a half note is 0.5s, so anywhere from 0.4719s to 0.5297s should smoothly snap to 0.5s)
+//     0.5s * 2^( +- 0.083 )
 
 
 // Experimental way of turning down the volume as the feedback goes up
@@ -18,11 +19,14 @@ use typenum::U1;
 // Set to 0 to not turn down the volume at all
 const VOLUME_CONTROL_COEF: f32 = 0.92;
 
+// The hipass applied after the delay since it can add low frequencies
+const HIPASS_AT: f32 = 10.; // In Hz
+
 
 baseplug::model! {
     #[derive(Debug, Serialize, Deserialize)]
     struct EchoModel {
-        #[model(min = 0.001, max = 2.0)]
+        #[model(min = 0.001, max = 2.0, smooth_ms = 100)]
         #[parameter(name = "time", unit = "Generic", gradient = "Power(4.0)")]
         time: f32,
 
@@ -46,6 +50,9 @@ struct EchoPlug {
     delay_l: delay::Tap<U1,f32>,
     delay_r: delay::Tap<U1,f32>,
 
+    hipass_l: filter::Highpole<f32,f32,U1>,
+    hipass_r: filter::Highpole<f32,f32,U1>,
+
     last_sample_l: f32,
     last_sample_r: f32
 }
@@ -66,12 +73,18 @@ impl Plugin for EchoPlug {
             delay_l: delay::Tap::new(0.001, 2.0),
             delay_r: delay::Tap::new(0.001, 2.0),
 
+            hipass_l: filter::Highpole::new(HIPASS_AT),
+            hipass_r: filter::Highpole::new(HIPASS_AT),
+
             last_sample_l: 0.,
             last_sample_r: 0.
         };
 
         ret.delay_l.set_sample_rate(_sample_rate as f64);
         ret.delay_r.set_sample_rate(_sample_rate as f64);
+
+        ret.hipass_l.set_sample_rate(_sample_rate as f64);
+        ret.hipass_r.set_sample_rate(_sample_rate as f64);
 
         ret
     }
@@ -91,8 +104,8 @@ impl Plugin for EchoPlug {
                     self.last_sample_r, model.time[i]
                 ]))[0];
 
-                output[0][i] = delayed_sample_l;
-                output[1][i] = delayed_sample_r;
+                self.last_sample_l = delayed_sample_l;
+                self.last_sample_r = delayed_sample_r;
             }
 
             else {
@@ -103,12 +116,12 @@ impl Plugin for EchoPlug {
                     input[1][i] * ( 1. - VOLUME_CONTROL_COEF * model.feedback[i] ) + self.last_sample_r * model.feedback[i], model.time[i]
                 ]))[0];
 
-                output[0][i] = input[0][i] + delayed_sample_l * model.feedback[i];
-                output[1][i] = input[1][i] + delayed_sample_r * model.feedback[i];
+                self.last_sample_l = input[0][i] + delayed_sample_l * model.feedback[i];
+                self.last_sample_r = input[1][i] + delayed_sample_r * model.feedback[i];
             }
 
-            self.last_sample_l = output[0][i];
-            self.last_sample_r = output[1][i];
+            output[0][i] = self.hipass_l.tick(&Frame::from([self.last_sample_l]))[0];
+            output[1][i] = self.hipass_r.tick(&Frame::from([self.last_sample_r]))[0];
         }
         
     }
